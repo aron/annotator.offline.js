@@ -45,6 +45,25 @@ Annotator.Plugin.Offline.Store = class Store extends Annotator.Delegator
   # Returns the current time in milliseconds.
   @now: -> new Date().getTime()
 
+  # Public: Extracts all the values stored under the KEY_PREFIX. An additional
+  # partial key can be provided that will be added to the prefix.
+  #
+  # partial - A partial database key (default: "").
+  #
+  # Examples
+  #
+  #   values = store.all()
+  #   some   = store.all("user") # All keys beginning with "user"
+  #
+  # Returns an array of extracted keys.
+  all: (partial="") ->
+    values = []
+    prefix = @prefixed(partial)
+    for key of localStorage when key.indexOf(prefix) is 0
+      value = @get(key.slice(Store.KEY_PREFIX.length))
+      values.push(value)
+    values
+
   # Public: Gets a key from localStorage. Checks the expiry of
   # the key when set, if expired returns null.
   #

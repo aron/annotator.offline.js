@@ -34,6 +34,27 @@ describe "Store", ->
       expect(Store.now()).to.equal(123456789)
       Date.prototype.getTime.restore()
 
+  describe "#all()", ->
+    keys = null
+
+    beforeEach ->
+      Store.localStorage = window.localStorage
+      keys = "test test2 test3 annotator.offline/test annotator.offline/key".split(" ")
+      window.localStorage.setItem(key, JSON.stringify(key)) for key in keys
+
+    afterEach ->
+      window.localStorage.removeItem(key) for key in keys
+
+    it "should fetch all the keys under the store namespace", ->
+      values = store.all()
+      expect(values.length).to.equal(2)
+      expect(values).to.include("annotator.offline/test", "annotator.offline/key")
+
+    it "should fetch only keys matching the partial key provided", ->
+      values = store.all("k")
+      expect(values.length).to.equal(1)
+      expect(values).to.include("annotator.offline/key")
+
   describe "#get()", ->
     beforeEach ->
       sinon.stub(store, "remove").returns(store)
@@ -131,6 +152,8 @@ describe "Store", ->
       store.clear()
       expect(Object.keys(window.localStorage)).to.include("test", "test.annotator.offline")
       expect(Object.keys(window.localStorage)).not.to.include("annotator.offline/key", "annotator.offline/key2")
+      
+      window.localStorage.removeItem(key) for key in keys
 
   describe "#checkCache()", ->
     it "should return the value if no cache is present", ->
