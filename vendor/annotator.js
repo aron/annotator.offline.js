@@ -672,8 +672,8 @@
           }
           return _results;
         }).call(this);
+        selection.removeAllRanges();
       }
-      selection.removeAllRanges();
       return $.grep(ranges, function(range) {
         if (range) selection.addRange(range.toRange());
         return range;
