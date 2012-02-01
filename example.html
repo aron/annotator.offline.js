@@ -8,6 +8,7 @@
   <style>body { font-size: 1.6em }</style>
 </head>
 <body>
+  <p>Current Connectivity: <span id="status"></span></p>
   <div id="content">
     <p>One morning, when Gregor Samsa woke from troubled dreams, he found himself transformed in his bed into a horrible vermin. He lay on his armour-like back, and if he lifted his head a little he could see his brown belly, slightly <big>domed</big> and divided by arches into stiff sections. The bedding was hardly able to cover it and seemed ready to slide off any moment. His many legs, pitifully thin compared with the size of the rest of him, waved about helplessly as he looked.</p>
 
@@ -41,7 +42,10 @@
 
     jQuery.when.apply(jQuery, requests).done ->
       content = jQuery("#content").annotator()
-      content.annotator('addPlugin', 'Offline')
+      content.annotator 'addPlugin', 'Offline',
+        online:  -> jQuery("#status").text("Online")
+        offline: -> jQuery("#status").text("Offline")
+
       window.annotator = content.data('annotator')
 
     jQuery("#clear-storage").click ->
