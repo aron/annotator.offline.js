@@ -58,6 +58,19 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     getUniqueKey: (annotation) ->
       annotation.id = Offline.uuid() unless annotation.id
       annotation.id
+
+    # Checks to see if the annotation should be loaded into this page. If
+    # the function returns true then it will be loaded. By default it will
+    # always return true. This can be overrided in the options.
+    #
+    # annotation - An annotation object.
+    #
+    # Examples
+    #
+    #   @shouldLoadAnnotation(annotation) #=> true
+    #
+    # Returns true or false.
+    shouldLoadAnnotation: (annotation) -> true
   
   # Creates a new instance of the plugin and initialises instance variables.
   #
@@ -73,13 +86,20 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #                              a unique value. By default it returns the id.
   #           setAnnotationData: Accepts a newly created annotation for
   #                              modification such as adding properties.
+  #           shouldLoadAnnotation: Function that should return if the
+  #                                 annotation should be loaded in this page.
   #
   # Returns nothing.
   constructor: ->
     super
     @store = new Offline.Store()
+    @cache = {}
+    handlers = 
+      online: "online"
+      offline: "offline"
+      annotationLoaded: "setAnnotationData"
+      beforeAnnotationCreated: "setAnnotationData"
 
-    handlers = {"online", "offline", "beforeAnnotationCreated": "setAnnotationData"}
     for own event, handler of handlers
       if typeof @options[handler] is "function"
         @on(event, jQuery.proxy @options, handler)
@@ -93,6 +113,15 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     @loadAnnotationsFromStore()
     if @isOnline() then @online() else @offline()
     jQuery(window).bind(online: @_onOnline, offline: @_onOffline)
+
+  # Public: Returns an object of loaded annotations indexed by unique key.
+  #
+  # Examples
+  #
+  #   plugin.annotations() #=> {1: {id: 1, text: "Test"}, 2: {id: 2, ...}}
+  #
+  # Returns an object.
+  annotations: -> @cache
 
   # Public: Publishes the "online" event on the plugin. All registered
   # subscribers recieve the plugin instance as the first argument.
@@ -139,7 +168,10 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   # Returns itself.
   loadAnnotationsFromStore: ->
     annotations = @store.all(Offline.ANNOTATION_PREFIX)
-    @annotator.loadAnnotations(annotations)
+    @annotator.loadAnnotations(annotations.slice())
+    for annotation in annotations when @options.shouldLoadAnnotation(annotation)
+      @publish("annotationLoaded", [annotation, this])
+      @cache[@keyForAnnotation(annotation)] = annotation
     this
 
   # Public: Updates the locally stored copy of the annotation.
@@ -153,10 +185,18 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns itself.
   updateAnnotation: (annotation) ->
-    key = @keyForAnnotation(annotation)
-    storable = {}
-    for own prop, value of annotation when prop isnt "highlights"
-      storable[prop] = value
+    id  = @keyForAnnotation(annotation)
+    key = @keyForStore(annotation)
+
+    local = @cache[id]
+    if local
+      jQuery.extend(local, annotation)
+    else
+      local = @cache[id] = annotation
+
+    storable = jQuery.extend({}, local)
+    delete storable.highlights
+
     @store.set(key, storable)
     this
 
@@ -171,8 +211,10 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns itself.
   removeAnnotation: (annotation) ->
-    key = @keyForAnnotation(annotation)
+    id  = @keyForAnnotation(annotation)
+    key = @keyForStore(annotation)
     @store.remove(key)
+    delete @cache[id]
     this
 
   # Internal: Retrieves a key for an annotation. This can be customised using
@@ -183,12 +225,24 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Examples
   #
-  #   key = @keyForAnnotation(annotation)
+  #   key = @keyForAnnotation(annotation)=
+  #
+  # Returns a unique key for the annotation.
+  keyForAnnotation: (annotation) ->
+    @options.getUniqueKey.call(this, annotation, this)
+
+  # Internal: Retrieves a key for the local storage.
+  #
+  # annotation - An annotation object.
+  #
+  # Examples
+  #
+  #   key = @keyForStore(annotation)
   #   store.set(key, annotation)
   #
   # Returns a key to be used to store the annotation.
-  keyForAnnotation: (annotation) ->
-    Offline.ANNOTATION_PREFIX + @options.getUniqueKey.call(this, annotation, this)
+  keyForStore: (annotation) ->
+    Offline.ANNOTATION_PREFIX + @keyForAnnotation(annotation)
 
   # Event callback for the "online" window event.
   #

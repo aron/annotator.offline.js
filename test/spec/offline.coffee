@@ -92,7 +92,7 @@ describe "Annotator.Plugin.Offline", ->
       expect(plugin.isOnline()).to.equal(false)
 
   describe "#loadAnnotationsFromStore()", ->
-    annotations = []
+    annotations = [{id: 1}, {id: 2}, {id: 3}]
 
     beforeEach ->
       sinon.stub(plugin.store, "all").returns(annotations)
@@ -107,6 +107,24 @@ describe "Annotator.Plugin.Offline", ->
       plugin.loadAnnotationsFromStore()
       expect(plugin.annotator.loadAnnotations).was.called()
       expect(plugin.annotator.loadAnnotations).was.calledWith(annotations)
+
+    it "should trigger the 'annotationLoaded' event", ->
+      target = sinon.stub()
+      plugin.on("annotationLoaded", target)
+      plugin.loadAnnotationsFromStore()
+      expect(target).was.called()
+      expect(target).was.calledWith(annotations[0], plugin)
+      expect(target).was.calledWith(annotations[1], plugin)
+      expect(target).was.calledWith(annotations[2], plugin)
+
+    it "should populate the cache", ->
+      plugin.loadAnnotationsFromStore()
+      expect(plugin.cache).to.eql(1: annotations[0], 2: annotations[1], 3: annotations[2])
+
+    it "should skip annotations if options.shouldLoadAnnotation() returns false", ->
+      plugin.options.shouldLoadAnnotation = (ann) -> ann.id isnt 2
+      plugin.loadAnnotationsFromStore()
+      expect(plugin.cache).to.eql(1: annotations[0], 3: annotations[2])
 
   describe "#updateAnnotation()", ->
     beforeEach ->
@@ -124,6 +142,19 @@ describe "Annotator.Plugin.Offline", ->
       expect(plugin.store.set).was.called()
       expect(plugin.store.set).was.calledWith("annotation.1", id: 1)
 
+    it "should add the annotation to the @cache", ->
+      annotation   = id: 1
+      plugin.cache = 2: {}
+      plugin.updateAnnotation(annotation)
+      expect(plugin.cache).to.eql(1: annotation, 2: {})
+
+    it "should updated the cached annotation object", ->
+      annotation   = id: 1
+      plugin.cache = 1: annotation, 2: {}
+      plugin.updateAnnotation(id: 1, text: "test")
+      expect(plugin.cache[1]).to.equal(annotation)
+      expect(plugin.cache[1]).to.eql(id: 1, text: "test")
+
   describe "#removeAnnotation()", ->
     beforeEach ->
       sinon.stub(plugin.store, "remove").returns(plugin.store)
@@ -134,10 +165,22 @@ describe "Annotator.Plugin.Offline", ->
       expect(plugin.store.remove).was.called()
       expect(plugin.store.remove).was.calledWith("annotation.1")
 
+    it "should remove the annotation from the @cache", ->
+      annotation   = id: 1
+      plugin.cache = 1: annotation, 2: {}
+      plugin.removeAnnotation(annotation)
+      expect(plugin.cache).to.eql(2: {})
+
   describe "#keyForAnnotation()", ->
     it "should return a unique key for the annotation", ->
       annotation = {id: 1}
       target = plugin.keyForAnnotation(annotation)
+      expect(target).to.equal(1)
+
+  describe "#keyForStore()", ->
+    it "should return a unique key for the annotation", ->
+      annotation = {id: 1}
+      target = plugin.keyForStore(annotation)
       expect(target).to.equal("annotation.1")
 
   describe "#_onOnline()", ->
