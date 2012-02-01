@@ -40,6 +40,25 @@ describe "Annotator.Plugin.Offline", ->
       plugin.pluginInit()
       expect(target).was.called()
 
+    it "should listen for changes to the windows online/offline events", ->
+      target = sinon.stub(jQuery.fn, "bind")
+      plugin.pluginInit()
+      expect(target).was.called()
+      expect(target).was.calledWith(online: plugin._onOnline, offline: plugin._onOffline)
+      jQuery.fn.bind.restore()
+
+    it "should trigger the 'online' event if online", ->
+      sinon.stub(plugin, "isOnline").returns(true)
+      target = sinon.stub(plugin, "online")
+      plugin.pluginInit()
+      expect(target).was.called()
+
+    it "should trigger the 'online' event if online", ->
+      sinon.stub(plugin, "isOnline").returns(false)
+      target = sinon.stub(plugin, "offline")
+      plugin.pluginInit()
+      expect(target).was.called()
+
   describe "#online()", ->
     it "should publish the 'online' event", ->
       target = sinon.stub()

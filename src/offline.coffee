@@ -1,3 +1,19 @@
+# Annotator plugin that handles storing annotations locally. It also detects
+# the browsers connectivity allowing you to sync annotations with an external
+# persistant store.
+#
+# As well as the online() and offline() callbacks that can be provided when
+# the plugin is initialised "online" and "offline" events are also triggered.
+#
+# Examples
+#
+#   annotator 'addPlugin', 'Offline',
+#     online: (plugin) ->
+#       startServerPoll()
+#     offline: (plugin) ->
+#       cancelServerPoll()
+#
+# Returns a new instance of the Offline plugin.
 Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   # Export Annotator properties into the local scope.
   _t = Annotator._t
@@ -47,6 +63,12 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # element - The root annotator element.
   # options - An object literal of options.
+  #           online:            Function that is called when the plugin goes
+  #                              online. Recieves the plugin object as an
+  #                              argument.
+  #           offline:           Function that is called when the plugin goes
+  #                              offline. Recieves the plugin object as an
+  #                              argument.
   #           getUniqueKey:      Function that accepts an annotation to return
   #                              a unique value. By default it returns the id.
   #           setAnnotationData: Accepts a newly created annotation for
@@ -56,8 +78,11 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   constructor: ->
     super
     @store = new Offline.Store()
-    if typeof @options.setAnnotationData is "function"
-      @on("beforeAnnotationCreated", jQuery.proxy(@options, "setAnnotationData"))
+
+    handlers = {"online", "offline", "beforeAnnotationCreated": "setAnnotationData"}
+    for own event, handler of handlers
+      if typeof @options[handler] is "function"
+        @on(event, jQuery.proxy @options, handler)
 
   # Internal: Initialises the plugin, called by the Annotator object once a
   # new instance of the object has been created and the @annotator property
@@ -66,6 +91,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   # Returns nothing.
   pluginInit: ->
     @loadAnnotationsFromStore()
+    if @isOnline() then @online() else @offline()
     jQuery(window).bind(online: @_onOnline, offline: @_onOffline)
 
   # Public: Publishes the "online" event on the plugin. All registered
@@ -131,7 +157,6 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     storable = {}
     for own prop, value of annotation when prop isnt "highlights"
       storable[prop] = value
-    console.log storable
     @store.set(key, storable)
     this
 
