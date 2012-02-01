@@ -3,8 +3,9 @@ describe "Annotator.Plugin.Offline", ->
   plugin  = null
 
   beforeEach ->
-    plugin = new Annotator.Plugin.Offline()
-    plugin.annotator = new Annotator(document.createElement('div'))
+    element = document.createElement('div')
+    plugin = new Annotator.Plugin.Offline(element)
+    plugin.annotator = new Annotator(element)
 
   afterEach ->
     localStorage.clear()
@@ -38,6 +39,38 @@ describe "Annotator.Plugin.Offline", ->
       target = sinon.stub(plugin, "loadAnnotationsFromStore")
       plugin.pluginInit()
       expect(target).was.called()
+
+  describe "#online()", ->
+    it "should publish the 'online' event", ->
+      target = sinon.stub()
+      plugin.on "online", target
+      plugin.online()
+      expect(target).was.called()
+      expect(target).was.calledWith(plugin)
+
+  describe "#offline()", ->
+    it "should publish the 'offline' event", ->
+      target = sinon.stub()
+      plugin.on "offline", target
+      plugin.offline()
+      expect(target).was.called()
+      expect(target).was.calledWith(plugin)
+
+  describe "#isOnline()", ->
+    nav = window.navigator
+
+    beforeEach ->
+      window.navigator = onLine: true
+
+    afterEach ->
+      window.navigator = nav
+
+    it "should return true if the browser has connectivity", ->
+      expect(plugin.isOnline()).to.equal(true)
+
+    it "should return false if the browser has no connectivity", ->
+      window.navigator.onLine = false
+      expect(plugin.isOnline()).to.equal(false)
 
   describe "#loadAnnotationsFromStore()", ->
     annotations = []
@@ -87,6 +120,18 @@ describe "Annotator.Plugin.Offline", ->
       annotation = {id: 1}
       target = plugin.keyForAnnotation(annotation)
       expect(target).to.equal("annotation.1")
+
+  describe "#_onOnline()", ->
+    it "should set the plugin as online", ->
+      target = sinon.stub(plugin, "online")
+      plugin._onOnline()
+      expect(target).was.called()
+
+  describe "#_onOffline()", ->
+    it "should set the plugin as offline", ->
+      target = sinon.stub(plugin, "offline")
+      plugin._onOffline()
+      expect(target).was.called()
 
   describe "#_onAnnotationCreated()", ->
     it "should insert the annotation into localStorage", ->

@@ -66,6 +66,42 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   # Returns nothing.
   pluginInit: ->
     @loadAnnotationsFromStore()
+    jQuery(window).bind(online: @_onOnline, offline: @_onOffline)
+
+  # Public: Publishes the "online" event on the plugin. All registered
+  # subscribers recieve the plugin instance as the first argument.
+  #
+  # Examples
+  #
+  #   plugin.on "online", -> alert("We're now online!")
+  #   plugin.online() # Alert box is displayed.
+  #
+  # Returns itself.
+  online: ->
+    @publish "online", [this]
+    this
+
+  # Public: Publishes the "offline" event on the plugin. All registered
+  # subscribers recieve the plugin instance as the first argument.
+  #
+  # Examples
+  #
+  #   plugin.on "offline", -> alert("We're now offline!")
+  #   plugin.offline() # Alert box is displayed.
+  #
+  # Returns itself.
+  offline: ->
+    @publish "offline", [this]
+    this
+
+  # Public: Checks to see if the browser currently has a network connection.
+  #
+  # Examples
+  #
+  #   if plugin.isOnline() then backupData()
+  #
+  # Returns true if the browser has connectivitiy.
+  isOnline: -> window.navigator.onLine
 
   # Public: Loads all stored annotations into the page. This should generally
   # only be called on page load.
@@ -128,6 +164,20 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   # Returns a key to be used to store the annotation.
   keyForAnnotation: (annotation) ->
     Offline.ANNOTATION_PREFIX + @options.getUniqueKey.call(this, annotation, this)
+
+  # Event callback for the "online" window event.
+  #
+  # event - A jQuery event object.
+  #
+  # Returns nothing.
+  _onOnline:  (event) => @online()
+
+  # Event callback for the "offline" window event.
+  #
+  # event - A jQuery event object.
+  #
+  # Returns nothing.
+  _onOffline: (event) => @offline()
 
   # Event callback for the "annotationCreated" event.
   #
