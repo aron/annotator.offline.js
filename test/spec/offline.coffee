@@ -34,6 +34,10 @@ describe "Annotator.Plugin.Offline", ->
       expect(ann).to.have.property("id").to.be.a("string")
       expect(target).to.equal(ann.id)
 
+  describe "#options.shouldLoadAnnotation()", ->
+    it "should return true", ->
+      expect(plugin.options.shouldLoadAnnotation({})).to.equal(true)
+
   describe "#pluginInit()", ->
     it "should load annotations from the store", ->
       target = sinon.stub(plugin, "loadAnnotationsFromStore")
@@ -58,6 +62,12 @@ describe "Annotator.Plugin.Offline", ->
       target = sinon.stub(plugin, "offline")
       plugin.pluginInit()
       expect(target).was.called()
+
+    it "should do nothing if Annotator is not supported", ->
+      sinon.stub(Annotator, "supported").returns(false)
+      target = sinon.stub(plugin, "loadAnnotationsFromStore")
+      plugin.pluginInit()
+      expect(target).was.notCalled()
 
   describe "#online()", ->
     it "should publish the 'online' event", ->
@@ -117,6 +127,15 @@ describe "Annotator.Plugin.Offline", ->
       expect(target).was.calledWith(annotations[1], plugin)
       expect(target).was.calledWith(annotations[2], plugin)
 
+    it "should trigger the 'beforeAnnotationLoaded' event", ->
+      target = sinon.stub()
+      plugin.on("beforeAnnotationLoaded", target)
+      plugin.loadAnnotationsFromStore()
+      expect(target).was.called()
+      expect(target).was.calledWith(annotations[0], plugin)
+      expect(target).was.calledWith(annotations[1], plugin)
+      expect(target).was.calledWith(annotations[2], plugin)
+
     it "should populate the cache", ->
       plugin.loadAnnotationsFromStore()
       expect(plugin.cache).to.eql(1: annotations[0], 2: annotations[1], 3: annotations[2])
@@ -126,49 +145,49 @@ describe "Annotator.Plugin.Offline", ->
       plugin.loadAnnotationsFromStore()
       expect(plugin.cache).to.eql(1: annotations[0], 3: annotations[2])
 
-  describe "#updateAnnotation()", ->
+  describe "#updateStoredAnnotation()", ->
     beforeEach ->
       sinon.stub(plugin.store, "set").returns(plugin.store)
 
     it "should store the annotation in localStorage", ->
       annotation = {id: 1}
-      plugin.updateAnnotation(annotation)
+      plugin.updateStoredAnnotation(annotation)
       expect(plugin.store.set).was.called()
       expect(plugin.store.set).was.calledWith("annotation.1", id: 1)
 
     it "should remove the 'highlights' property from the annotation", ->
       annotation = {id: 1, highlights: []}
-      plugin.updateAnnotation(annotation)
+      plugin.updateStoredAnnotation(annotation)
       expect(plugin.store.set).was.called()
       expect(plugin.store.set).was.calledWith("annotation.1", id: 1)
 
     it "should add the annotation to the @cache", ->
       annotation   = id: 1
       plugin.cache = 2: {}
-      plugin.updateAnnotation(annotation)
+      plugin.updateStoredAnnotation(annotation)
       expect(plugin.cache).to.eql(1: annotation, 2: {})
 
     it "should updated the cached annotation object", ->
       annotation   = id: 1
       plugin.cache = 1: annotation, 2: {}
-      plugin.updateAnnotation(id: 1, text: "test")
+      plugin.updateStoredAnnotation(id: 1, text: "test")
       expect(plugin.cache[1]).to.equal(annotation)
       expect(plugin.cache[1]).to.eql(id: 1, text: "test")
 
-  describe "#removeAnnotation()", ->
+  describe "#removeStoredAnnotation()", ->
     beforeEach ->
       sinon.stub(plugin.store, "remove").returns(plugin.store)
 
     it "should remove the annotation from localStorage", ->
       annotation = {id: 1}
-      plugin.removeAnnotation(annotation)
+      plugin.removeStoredAnnotation(annotation)
       expect(plugin.store.remove).was.called()
       expect(plugin.store.remove).was.calledWith("annotation.1")
 
     it "should remove the annotation from the @cache", ->
       annotation   = id: 1
       plugin.cache = 1: annotation, 2: {}
-      plugin.removeAnnotation(annotation)
+      plugin.removeStoredAnnotation(annotation)
       expect(plugin.cache).to.eql(2: {})
 
   describe "#keyForAnnotation()", ->
@@ -197,7 +216,7 @@ describe "Annotator.Plugin.Offline", ->
 
   describe "#_onAnnotationCreated()", ->
     it "should insert the annotation into localStorage", ->
-      target = sinon.stub(plugin, "updateAnnotation")
+      target = sinon.stub(plugin, "updateStoredAnnotation")
       annotation = {id: 1}
       plugin._onAnnotationCreated(annotation)
       expect(target).was.called()
@@ -205,7 +224,7 @@ describe "Annotator.Plugin.Offline", ->
 
   describe "#_onAnnotationUpdated()", ->
     it "should update the annotation into localStorage", ->
-      target = sinon.stub(plugin, "updateAnnotation")
+      target = sinon.stub(plugin, "updateStoredAnnotation")
       annotation = {id: 1}
       plugin._onAnnotationUpdated(annotation)
       expect(target).was.called()
@@ -213,7 +232,7 @@ describe "Annotator.Plugin.Offline", ->
 
   describe "#_onAnnotationDeleted()", ->
     it "should remove the annotation from localStorage", ->
-      target = sinon.stub(plugin, "removeAnnotation")
+      target = sinon.stub(plugin, "removeStoredAnnotation")
       annotation = {id: 1}
       plugin._onAnnotationDeleted(annotation)
       expect(target).was.called()
