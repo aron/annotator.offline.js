@@ -145,6 +145,62 @@ describe "Annotator.Plugin.Offline", ->
       plugin.loadAnnotationsFromStore()
       expect(plugin.cache).to.eql(1: annotations[0], 3: annotations[2])
 
+  describe "addAnnotation", ->
+    annotation = null
+
+    beforeEach ->
+      plugin.cache = {}
+      annotation =
+        id: "test-id"
+        text: "test text"
+      sinon.stub(plugin.annotator, "setupAnnotation")
+      sinon.stub(plugin, "updateStoredAnnotation")
+
+    it "should add the annotation to the Annotator if not loaded", ->
+      plugin.addAnnotation(annotation)
+      expect(plugin.annotator.setupAnnotation).was.called()
+      expect(plugin.annotator.setupAnnotation).was.calledWith(annotation)
+
+    it "should silence the \"annotationCreated\" event if options.silent is true", ->
+      plugin.addAnnotation(annotation, silent: true)
+      expect(plugin.annotator.setupAnnotation).was.called()
+      expect(plugin.annotator.setupAnnotation).was.calledWith(annotation, true)
+
+    it "should update the stored annotation object if loaded", ->
+      cached = {id: "test-id"}
+      plugin.cache = {"test-id": cached}
+      plugin.addAnnotation(annotation)
+      expect(plugin.updateStoredAnnotation).was.called()
+      expect(plugin.updateStoredAnnotation).was.calledWith(annotation)
+
+    it "should update the stored annotation object if not required by this page", ->
+      sinon.stub(plugin.options, "shouldLoadAnnotation").returns(false)
+      plugin.addAnnotation(annotation)
+      expect(plugin.updateStoredAnnotation).was.called()
+      expect(plugin.updateStoredAnnotation).was.calledWith(annotation)
+
+  describe "addAnnotation", ->
+    annotation = null
+
+    beforeEach ->
+      plugin.cache = {}
+      annotation =
+        id: "test-id"
+        text: "test text"
+      sinon.stub(plugin.annotator, "deleteAnnotation")
+      sinon.stub(plugin, "removeStoredAnnotation")
+
+    it "should remove the annotation from the Annotator", ->
+      plugin.removeAnnotation(annotation)
+      expect(plugin.annotator.deleteAnnotation).was.called()
+      expect(plugin.annotator.deleteAnnotation).was.calledWith(annotation)
+
+    it "should remove the stored annotation object if not required by this page", ->
+      sinon.stub(plugin.options, "shouldLoadAnnotation").returns(false)
+      plugin.removeAnnotation(annotation)
+      expect(plugin.removeStoredAnnotation).was.called()
+      expect(plugin.removeStoredAnnotation).was.calledWith(annotation)
+
   describe "#updateStoredAnnotation()", ->
     beforeEach ->
       sinon.stub(plugin.store, "set").returns(plugin.store)
