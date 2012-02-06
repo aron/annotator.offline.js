@@ -5,6 +5,11 @@
 # As well as the online() and offline() callbacks that can be provided when
 # the plugin is initialised "online" and "offline" events are also triggered.
 #
+# Also triggered are the "beforeAnnotationLoaded" and "annotationLoaded"
+# events. These are fired when the annotions are extracted from localStorage.
+# "beforeAnnotationLoaded" should always be used to modify the annotation and
+# "annotationLoaded" for anything that needs to happen afterward.
+#
 # Examples
 #
 #   annotator 'addPlugin', 'Offline',
@@ -40,7 +45,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     "annotationCreated": "_onAnnotationCreated"
     "annotationUpdated": "_onAnnotationUpdated"
     "annotationDeleted": "_onAnnotationDeleted"
-  
+
   # Default options for the plugin.
   options:
     # Creates a unique key for the annotation to be stored against. This uses
@@ -71,7 +76,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     #
     # Returns true or false.
     shouldLoadAnnotation: (annotation) -> true
-  
+
   # Creates a new instance of the plugin and initialises instance variables.
   #
   # element - The root annotator element.
@@ -94,10 +99,10 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
     super
     @store = new Offline.Store()
     @cache = {}
-    handlers = 
+    handlers =
       online: "online"
       offline: "offline"
-      annotationLoaded: "setAnnotationData"
+      beforeAnnotationLoaded:  "setAnnotationData"
       beforeAnnotationCreated: "setAnnotationData"
 
     for own event, handler of handlers
@@ -110,6 +115,8 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns nothing.
   pluginInit: ->
+    return unless Annotator.supported()
+
     @loadAnnotationsFromStore()
     if @isOnline() then @online() else @offline()
     jQuery(window).bind(online: @_onOnline, offline: @_onOffline)
