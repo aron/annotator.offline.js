@@ -174,11 +174,56 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns itself.
   loadAnnotationsFromStore: ->
+    current = []
     annotations = @store.all(Offline.ANNOTATION_PREFIX)
-    @annotator.loadAnnotations(annotations.slice())
     for annotation in annotations when @options.shouldLoadAnnotation(annotation)
+      # beforeAnnotationLoaded allows the annotation data to be manipulated
+      # before it is loaded into Annotator.
+      @publish("beforeAnnotationLoaded", [annotation, this])
       @publish("annotationLoaded", [annotation, this])
       @cache[@keyForAnnotation(annotation)] = annotation
+      current.push(annotation)
+    @annotator.loadAnnotations(current) if current.length
+    this
+
+  # Public: Adds an annotation to the store, also adds it to the current
+  # page if needed.
+  #
+  # annotation - An annotation object to save.
+  # options    - An object of method options.
+  #              silent: If true prevents the annotator from firing the
+  #                      "annotationCreated" event.
+  #
+  # Examples
+  #
+  #   getAnnotationFromServer (ann) ->
+  #     offline.addAnnotation(ann)
+  #
+  # Returns itself.
+  addAnnotation: (annotation, options={}) ->
+    isLoaded = @cache[@options.getUniqueKey(annotation)]
+    if not isLoaded and @options.shouldLoadAnnotation(annotation)
+      @annotator.setupAnnotation(annotation, options.silent)
+    else
+      @updateStoredAnnotation(annotation)
+    this
+
+  # Public: Removes an annotation from the store, also removes it from the
+  # current page if needed.
+  #
+  # annotation - An annotation object to remove.
+  #
+  # Examples
+  #
+  #   getAnnotationFromServer (ann) ->
+  #     offline.addAnnotation(ann)
+  #
+  # Returns itself.
+  removeAnnotation: (annotation) ->
+    if @options.shouldLoadAnnotation(annotation)
+      @annotator.deleteAnnotation(annotation)
+    else
+      @removeStoredAnnotation(annotation)
     this
 
   # Public: Updates the locally stored copy of the annotation.
@@ -191,7 +236,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #     store.updateAnnotation(ann)
   #
   # Returns itself.
-  updateAnnotation: (annotation) ->
+  updateStoredAnnotation: (annotation) ->
     id  = @keyForAnnotation(annotation)
     key = @keyForStore(annotation)
 
@@ -217,7 +262,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #     store.removeAnnotation(ann)
   #
   # Returns itself.
-  removeAnnotation: (annotation) ->
+  removeStoredAnnotation: (annotation) ->
     id  = @keyForAnnotation(annotation)
     key = @keyForStore(annotation)
     @store.remove(key)
@@ -271,7 +316,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns nothing.
   _onAnnotationCreated: (annotation) ->
-    @updateAnnotation(annotation)
+    @updateStoredAnnotation(annotation)
 
   # Event callback for the "annotationUpdated" event.
   #
@@ -279,7 +324,7 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns nothing.
   _onAnnotationUpdated: (annotation) ->
-    @updateAnnotation(annotation)
+    @updateStoredAnnotation(annotation)
 
   # Event callback for the "annotationDeleted" event.
   #
@@ -287,4 +332,4 @@ Annotator.Plugin.Offline = class Offline extends Annotator.Plugin
   #
   # Returns nothing.
   _onAnnotationDeleted: (annotation) ->
-    @removeAnnotation(annotation)
+    @removeStoredAnnotation(annotation)
