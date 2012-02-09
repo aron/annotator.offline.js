@@ -6,12 +6,18 @@ annotations in local storage if it's supported by the current browser. The
 plugin will also fire "online" and "offline" events when the browsers
 connectivity changes.
 
+There is a [demo available online][#demo].
+
+[#demo]: http://aron.github.com/annotator.offline.js/index.html
 [#annotator]: http://okfnlabs.org/annotator/
 
 Usage
 -----
 
 The plugin requires the _annotator.js_ and _annotator.css_ to be included on the page. See the annotator [Getting Started][#ann-install] guide for instructions then simply include the _annotator.offline.js_ file in your page.
+This can be downloaded from the GitHub [download page][#download].
+
+[#download]: http://github.com/aron/annotator.offline.js/downloads
 
 ```html
 <link rel="stylesheet" href="./annotator.css" />
@@ -142,4 +148,13 @@ The plugin uses the following libraries for development:
 License
 -------
 
+This plugin was commissioned and open sourced by Compendio.
+
+Copyright 2012, Compendio Bildungsmedien AG
+Neunbrunnenstrasse 50
+8050 Zürich
+www.compendio.ch
+
 Released under the [MIT license][#license]
+
+[#license]: https://github.com/aron/annotator.offline.js/blob/development/README.md
