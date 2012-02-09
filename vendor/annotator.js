@@ -996,6 +996,14 @@
       return this;
     };
 
+    Widget.prototype.isInvertedY = function() {
+      return this.element.hasClass(this.classes.invert.y);
+    };
+
+    Widget.prototype.isInvertedX = function() {
+      return this.element.hasClass(this.classes.invert.x);
+    };
+
     return Widget;
 
   })(Delegator);
@@ -1030,15 +1038,18 @@
       this.show = __bind(this.show, this);      Editor.__super__.constructor.call(this, $(this.html)[0], options);
       this.fields = [];
       this.annotation = {};
-      this.setupDragabbles();
+      this.setupDraggables();
     }
 
     Editor.prototype.show = function(event) {
+      var focusPos;
       util.preventEventDefault(event);
       this.element.removeClass(this.classes.hide);
       this.element.find('.annotator-save').addClass(this.classes.focus);
-      this.element.find(':input:first').focus();
-      return this.checkOrientation().publish('show');
+      this.checkOrientation();
+      focusPos = this.isInvertedY() ? ':last' : ':first';
+      this.element.find(":input" + focusPos).focus();
+      return this.publish('show');
     };
 
     Editor.prototype.hide = function(event) {
@@ -1141,7 +1152,7 @@
       return this.element.find('.' + this.classes.focus).removeClass(this.classes.focus);
     };
 
-    Editor.prototype.setupDragabbles = function() {
+    Editor.prototype.setupDraggables = function() {
       var classes, controls, editor, mousedown, onMousedown, onMousemove, onMouseup, resize, textarea, throttle,
         _this = this;
       mousedown = null;
