@@ -2,15 +2,18 @@ fs   = require "fs"
 FFI  = require "node-ffi"
 libc = new FFI.Library(null, "system": ["int32", ["string"]])
 run  = libc.system
+pkg  = require "package"
 
-VERSION = "0.1.0"
+VERSION = pkg.version
 PROJECT = "annotator.offline"
 OUTPUT  = "pkg/#{PROJECT}.min.js"
 COFFEE  = "`npm bin`/coffee"
 UGLIFY  = "`npm bin`/uglifyjs"
 HEADER  = """
 /*  Offline Annotator Plugin - v#{VERSION}
- *  Copyright 2012, Compendio
+ *  Copyright 2012, Compendio <www.compendio.ch>
+ *  Released under the MIT license
+ *  More Information: http://github.com/aron/annotator.offline.js
  */
 """
 
@@ -34,4 +37,4 @@ task "build", "Concatenates and minifies JS", (options) ->
 
 task "pkg", "Creates a zip package with minified scripts", ->
   invoke "build"
-  run "zip -jJ #{PROJECT}.#{VERSION}.zip #{OUTPUT}"
+  run "zip -jJ pkg/#{PROJECT}.#{VERSION}.zip #{OUTPUT}"
