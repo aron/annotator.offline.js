@@ -46,7 +46,7 @@ Options
 
  - `online`: A function that is called when the plugin goes online. Receives
    the offline plugin object as an argument.
- - `offline`: A function that is called when the plugin goes offline. Receives 
+ - `offline`: A function that is called when the plugin goes offline. Receives
    the plugin object as an argument.
  - `getUniqueKey`: A function that accepts an annotation and should return a
     unique value for it. By default it will return the id property (if no such
@@ -60,6 +60,30 @@ Options
    annotation should be loaded in this page. This should be used if you have
    many pages on your site being annotated to prevent the annotator trying to
    load them all each time.
+
+Loading Annotations Conditionally
+---------------------------------
+
+If you have a single page application (such as an ebook reader) you may wish
+for finer grained control over which annotations are loaded. To do this
+you can use a combination of `setAnnotationData` and `shouldLoadAnnotation`
+options:
+
+```javascript
+jQuery('#content').annotator().annotator("addPlugin", "Offline", {
+  setAnnotationData: function (ann) {
+    // Add page specific data to the annotation on creation.
+    if (!ann.page) {
+      ann.page = getCurrentPage(); // getCurrentPage() would return the current page number
+    }
+  },
+  shouldLoadAnnotation: function (ann) {
+    // Return true if the annotation should be loaded into the current view.
+    return ann.page === getCurrentPage();
+  }
+});
+
+```
 
 API
 ---
